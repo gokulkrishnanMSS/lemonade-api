@@ -14,3 +14,16 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
     show-sql: true
+  servlet:
+    multipart:
+      # Default is 1MB, too small for songs
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+# Song storage, started with compose.yaml
+seaweedfs:
+  s3:
+    endpoint: http://localhost:8333
+    access-key: lemonade
+    secret-key: lemonade-secret
+    bucket: music

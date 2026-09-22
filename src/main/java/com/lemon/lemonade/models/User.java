@@ -15,14 +15,9 @@ import lombok.Builder;
 public class User {
 
     @Id
-    private String id; // We will use the Google User ID as the primary key
+    private String id;
 
     private String email;
     private String name;
     private String profilePicture;
-
-    // This automatically encrypts/decrypts the token when saving/reading from PostgreSQL
-    @Convert(converter = TokenEncryptionConverter.class) 
-    @Column(name = "google_refresh_token", length = 500)
-    private String googleRefreshToken; 
 }

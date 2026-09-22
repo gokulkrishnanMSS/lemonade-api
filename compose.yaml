@@ -1,0 +1,38 @@
+# Services the app needs for local development. Start with: docker compose up -d
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      # Must match spring.datasource.* in application.yaml. Only applied when the data volume is first created.
+      POSTGRES_PASSWORD: macbook@pass
+    ports:
+      - "5432:5432"
+    volumes:
+      # Postgres 18+ keeps its data under /var/lib/postgresql/18/docker, so mount the parent folder
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # Song storage
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.47
+    # One container running master, volume, filer and the S3 API
+    command: server -dir=/data -s3
+    environment:
+      # S3 credentials; must match seaweedfs.s3.* in application.yaml
+      AWS_ACCESS_KEY_ID: lemonade
+      AWS_SECRET_ACCESS_KEY: lemonade-secret
+    ports:
+      - "8333:8333" # S3 API, used by the app
+      - "8888:8888" # Filer UI, browse stored songs at http://localhost:8888/buckets/music/
+    volumes:
+      - seaweedfs-data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  seaweedfs-data:

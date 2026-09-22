@@ -33,9 +33,7 @@ tasks.withType<Test> {
 }
 
 dependencies {
-    implementation("com.google.api-client:google-api-client:2.2.0")
-    implementation("com.google.http-client:google-http-client-jackson2:1.43.3")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
 }
 
 dependencies {
@@ -43,4 +41,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     runtimeOnly("org.postgresql:postgresql")
+    implementation("com.auth0:java-jwt:4.4.0")
+    implementation(platform("software.amazon.awssdk:bom:2.55.2"))
+    implementation("software.amazon.awssdk:s3")
 }
