@@ -29,31 +29,31 @@ public class UserAuthentication implements Authentication {
 
     @Override
     public Object getCredentials() {
-        return userDetails.getPassword();
+        return token;
     }
 
     @Override
-    public Object getDetails() {
-        return userDetails.toString();
+    public @Nullable Object getDetails() {
+        return userDetails;
     }
 
     @Override
     public @Nullable Object getPrincipal() {
-        return null;
+        return userDetails;
     }
 
     @Override
     public boolean isAuthenticated() {
-        return false;
+        return isValid;
     }
 
     @Override
     public void setAuthenticated(boolean isAuthenticated) throws IllegalArgumentException {
-
+        this.isValid = isAuthenticated;
     }
 
     @Override
     public String getName() {
-        return "";
+        return userDetails == null ? "" : userDetails.getUsername();
     }
 }

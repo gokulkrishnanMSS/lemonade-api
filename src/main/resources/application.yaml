@@ -1,6 +1,24 @@
 spring:
   application:
     name: lemonade
+  # Mail credentials and the token secret live here, outside git
+  config:
+    import: optional:file:.env.properties
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
   datasource:
     url: jdbc:postgresql://localhost:5432/postgres
     username: postgres
@@ -19,6 +37,14 @@ spring:
       # Default is 1MB, too small for songs
       max-file-size: 100MB
       max-request-size: 100MB
+
+# Signs login tokens. The real value comes from .env.properties; this default only keeps the app booting.
+security:
+  secret:
+    key: ${SECURITY_SECRET_KEY:local-development-secret}
+jwt:
+  issuer:
+    name: ${JWT_ISSUER_NAME:lemonade}
 
 # Song storage, started with compose.yaml
 seaweedfs:

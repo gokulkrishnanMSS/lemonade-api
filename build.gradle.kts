@@ -42,6 +42,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     runtimeOnly("org.postgresql:postgresql")
     implementation("com.auth0:java-jwt:4.4.0")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation(platform("software.amazon.awssdk:bom:2.55.2"))
     implementation("software.amazon.awssdk:s3")
 }

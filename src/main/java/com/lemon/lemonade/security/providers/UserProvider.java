@@ -25,8 +25,13 @@ public class UserProvider implements AuthenticationProvider {
         try {
             SecurityUser user = securityDecoder.getUserFromJwt(token);
             if(user.getIsValid()){
-                userAuthentication.setAuthenticated(true);
-                return userAuthentication;
+                // Rebuilt rather than mutated, so the logged-in user is the principal
+                return UserAuthentication
+                        .builder()
+                        .token(token)
+                        .userDetails(user.getUserDetails())
+                        .isValid(true)
+                        .build();
             }
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);

@@ -2,6 +2,7 @@ package com.lemon.lemonade.Exceptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.MailException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
@@ -26,6 +27,33 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<String> handleBadRequest(IllegalArgumentException e) {
         return ResponseEntity.badRequest().body(e.getMessage());
+    }
+
+    @ExceptionHandler(UserAlreadyExistException.class)
+    public ResponseEntity<String> handleUserExists(UserAlreadyExistException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+    }
+
+    @ExceptionHandler(InvalidOtpException.class)
+    public ResponseEntity<String> handleInvalidOtp(InvalidOtpException e) {
+        return ResponseEntity.badRequest().body(e.getMessage());
+    }
+
+    // The OTP is gone: it ran out, was never verified, or was guessed at too often
+    @ExceptionHandler({OtpExpiredException.class, OtpNotFoundException.class})
+    public ResponseEntity<String> handleMissingOtp(RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.GONE).body(e.getMessage());
+    }
+
+    @ExceptionHandler(PasswordNotValidException.class)
+    public ResponseEntity<String> handlePasswordNotValid(PasswordNotValidException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+    }
+
+    // The mail server refused the message, e.g. wrong Gmail app password
+    @ExceptionHandler(MailException.class)
+    public ResponseEntity<String> handleMail(MailException e) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body("Could not send the email: " + e.getMessage());
     }
 
     // Errors returned by SeaweedFS, e.g. 416 for a Range past the end of a song
