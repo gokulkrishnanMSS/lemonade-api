@@ -3,21 +3,28 @@ package com.lemon.lemonade.services;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lemon.lemonade.Exceptions.OtpNotFoundException;
 import com.lemon.lemonade.Exceptions.PasswordNotValidException;
+import com.lemon.lemonade.Exceptions.TokenNotValidException;
 import com.lemon.lemonade.Exceptions.UserAlreadyExistException;
 import com.lemon.lemonade.dto.LoginRequest;
 import com.lemon.lemonade.dto.LoginResponse;
 import com.lemon.lemonade.dto.SignupRequest;
+import com.lemon.lemonade.dto.TokenResponse;
 import com.lemon.lemonade.models.User;
 import com.lemon.lemonade.repositories.UserRepository;
+import com.lemon.lemonade.security.utils.SecurityDecoder;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,12 +44,16 @@ class AuthServiceTest {
     private final UserRepository userRepository = mock(UserRepository.class);
     private final MailSenderService mailSenderService = mock(MailSenderService.class);
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final SecurityDecoder securityDecoder = new SecurityDecoder(objectMapper, userRepository);
     private final AuthService authService =
-            new AuthService(userRepository, mailSenderService, passwordEncoder, new ObjectMapper());
+            new AuthService(userRepository, mailSenderService, passwordEncoder, objectMapper, securityDecoder);
 
     {
         ReflectionTestUtils.setField(authService, "secretKey", SECRET);
         ReflectionTestUtils.setField(authService, "issuer", "lemonade");
+        ReflectionTestUtils.setField(securityDecoder, "secretKey", SECRET);
+        ReflectionTestUtils.setField(securityDecoder, "issuer", "lemonade");
     }
 
     @Test
@@ -87,7 +98,7 @@ class AuthServiceTest {
 
         LoginResponse response = authService.login(new LoginRequest(EMAIL, "sunny-day-42"));
 
-        DecodedJWT token = JWT.require(Algorithm.HMAC256(SECRET)).withIssuer("lemonade").build().verify(response.token());
+        DecodedJWT token = JWT.require(Algorithm.HMAC256(SECRET)).withIssuer("lemonade").build().verify(response.token().accesstoken());
         assertThat(token.getSubject()).contains(EMAIL).contains("user-1").doesNotContain(user.getPassword());
         assertThat(token.getExpiresAt()).isInTheFuture();
     }
@@ -103,5 +114,36 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(new LoginRequest("nobody@gmail.com", "sunny-day-42")))
                 .isInstanceOf(PasswordNotValidException.class)
                 .hasMessage("Email or password is not valid");
+    }
+
+    @Test
+    void refreshesAccessTokenUsingValidRefreshToken() throws JsonProcessingException {
+        User user = User.builder().id("user-1").email(EMAIL).name("Gokul")
+                .password(passwordEncoder.encode("sunny-day-42")).build();
+        when(userRepository.findById("user-1")).thenReturn(Optional.of(user));
+
+        String oldRefreshToken = JWT.create()
+                .withIssuer("lemonade")
+                .withSubject(objectMapper.writeValueAsString(user))
+                .withIssuedAt(new Date())
+                .withExpiresAt(Date.from(Instant.now().plus(Duration.ofDays(300))))
+                .sign(Algorithm.HMAC256(SECRET));
+
+        TokenResponse tokenResponse = authService.getRefToken(oldRefreshToken);
+
+        assertThat(tokenResponse.refreshToken()).isEqualTo(oldRefreshToken);
+        DecodedJWT newAccessToken = JWT.require(Algorithm.HMAC256(SECRET)).withIssuer("lemonade").build().verify(tokenResponse.accesstoken());
+        assertThat(newAccessToken.getSubject()).contains(EMAIL).contains("user-1").doesNotContain(user.getPassword());
+        assertThat(newAccessToken.getExpiresAt()).isInTheFuture();
+    }
+
+    @Test
+    void refusesInvalidRefreshToken() {
+        assertThatThrownBy(() -> authService.getRefToken("invalid.token.here"))
+                .isInstanceOf(TokenNotValidException.class);
+        assertThatThrownBy(() -> authService.getRefToken(""))
+                .isInstanceOf(TokenNotValidException.class);
+        assertThatThrownBy(() -> authService.getRefToken(null))
+                .isInstanceOf(TokenNotValidException.class);
     }
 }

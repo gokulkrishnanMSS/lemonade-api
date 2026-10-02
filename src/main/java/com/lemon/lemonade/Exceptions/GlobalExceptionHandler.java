@@ -29,6 +29,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.badRequest().body(e.getMessage());
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<String> handleForbidden(ForbiddenException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+    }
+
     @ExceptionHandler(UserAlreadyExistException.class)
     public ResponseEntity<String> handleUserExists(UserAlreadyExistException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());

@@ -1,5 +1,6 @@
 package com.lemon.lemonade.security.utils;
 
+import com.lemon.lemonade.models.User;
 import lombok.Builder;
 import lombok.Data;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -13,4 +14,5 @@ public class SecurityUser {
     private Boolean isValid;
     private String token;
     private UserDetails userDetails;
+    private User user;
 }

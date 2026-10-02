@@ -1,6 +1,7 @@
 package com.lemon.lemonade.security.userDetails;
 
 import com.lemon.lemonade.models.User;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
@@ -9,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
+@Getter
 @RequiredArgsConstructor
 public class UserDetail implements UserDetails {
 

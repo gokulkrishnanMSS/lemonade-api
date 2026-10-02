@@ -1,9 +1,6 @@
 package com.lemon.lemonade.controllers;
 
-import com.lemon.lemonade.dto.LoginRequest;
-import com.lemon.lemonade.dto.LoginResponse;
-import com.lemon.lemonade.dto.MessageResponse;
-import com.lemon.lemonade.dto.SignupRequest;
+import com.lemon.lemonade.dto.*;
 import com.lemon.lemonade.services.AuthService;
 import com.lemon.lemonade.services.MailSenderService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -51,5 +48,11 @@ public class AuthController {
     @Operation(summary = "Log in", description = "Returns a token to send in the Authorization header")
     public LoginResponse login(@RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    @PostMapping("/user/get-access")
+    @Operation(summary = "Get access token", description = "Decodes the refresh token and returns a new access token along with the refresh token")
+    public TokenResponse getAccess(@RequestParam("reftoken") String refToken) {
+        return authService.getRefToken(refToken);
     }
 }

@@ -25,10 +25,13 @@ public class UserFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
 
-        String requestURI = request.getRequestURI();
+
         String token = request.getHeader("Authorization");
-        if(token == null){
-            throw new  TokenNotValidException("Token not valid");
+        if (token == null || token.isBlank()) {
+            throw new TokenNotValidException("Token not valid");
+        }
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7).strip();
         }
 
         UserAuthentication authentication =  UserAuthentication

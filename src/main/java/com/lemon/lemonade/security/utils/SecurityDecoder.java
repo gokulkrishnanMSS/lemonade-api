@@ -53,6 +53,11 @@ public class SecurityDecoder {
                 .email(user.getEmail())
                 .userDetails(new UserDetail(user))
                 .isValid(true)
+                .user(user)
                 .build();
+    }
+
+    public User getUser(String jwt) throws JsonProcessingException {
+        return getUserFromJwt(jwt).getUser();
     }
 }

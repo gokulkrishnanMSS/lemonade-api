@@ -5,12 +5,16 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lemon.lemonade.Exceptions.PasswordNotValidException;
+import com.lemon.lemonade.Exceptions.TokenNotValidException;
 import com.lemon.lemonade.Exceptions.UserAlreadyExistException;
 import com.lemon.lemonade.dto.LoginRequest;
 import com.lemon.lemonade.dto.LoginResponse;
 import com.lemon.lemonade.dto.SignupRequest;
+import com.lemon.lemonade.dto.TokenResponse;
 import com.lemon.lemonade.models.User;
 import com.lemon.lemonade.repositories.UserRepository;
+import com.lemon.lemonade.security.utils.SecurityDecoder;
+import com.lemon.lemonade.security.utils.SecurityUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,13 +29,15 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private static final Duration TOKEN_TTL = Duration.ofDays(14);
+    private static final Duration TOKEN_TTL = Duration.ofHours(1);
+    private static final Duration REF_TOKEN_TTL = Duration.ofDays(300);
     private static final int MIN_PASSWORD_LENGTH = 8;
 
     private final UserRepository userRepository;
     private final MailSenderService mailSenderService;
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
+    private final SecurityDecoder securityDecoder;
 
     @Value("${security.secret.key}")
     private String secretKey;
@@ -75,10 +81,27 @@ public class AuthService {
         }
 
         Instant expiresAt = Instant.now().plus(TOKEN_TTL);
-        return new LoginResponse(createToken(user, expiresAt), expiresAt.toString());
+        Instant refTokenExpAt =  Instant.now().plus(REF_TOKEN_TTL);
+        return new LoginResponse(createToken(user, expiresAt ,  refTokenExpAt), expiresAt.toString());
     }
 
-    private String createToken(User user, Instant expiresAt) {
+    public TokenResponse getRefToken(String token) {
+        if (token == null || token.isBlank()) {
+            throw new TokenNotValidException("Token not valid");
+        }
+        String cleanToken = token.startsWith("Bearer ") ? token.substring(7) : token;
+        try {
+            SecurityUser securityUser = securityDecoder.getUserFromJwt(cleanToken);
+            User user = securityUser.getUser();
+            Instant expiresAt = Instant.now().plus(TOKEN_TTL);
+            String accessToken = createAccessToken(user, expiresAt);
+            return new TokenResponse(cleanToken, accessToken);
+        } catch (JsonProcessingException e) {
+            throw new TokenNotValidException("Token not valid, log in again");
+        }
+    }
+
+    private String createAccessToken(User user, Instant expiresAt) {
         try {
             return JWT.create()
                     .withIssuer(issuer)
@@ -87,6 +110,24 @@ public class AuthService {
                     .withIssuedAt(new Date())
                     .withExpiresAt(Date.from(expiresAt))
                     .sign(Algorithm.HMAC256(secretKey));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Could not create the access token", e);
+        }
+    }
+
+    private TokenResponse createToken(User user, Instant expiresAt, Instant refTokenExp) {
+        try {
+            String accessToken = createAccessToken(user, expiresAt);
+
+            String refreshToken = JWT.create()
+                    .withIssuer(issuer)
+                    // SecurityDecoder reads the user back out of the subject; the password is @JsonIgnore'd
+                    .withSubject(objectMapper.writeValueAsString(user))
+                    .withIssuedAt(new Date())
+                    .withExpiresAt(Date.from(refTokenExp))
+                    .sign(Algorithm.HMAC256(secretKey));
+
+            return new TokenResponse(refreshToken, accessToken);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Could not create the login token", e);
         }
